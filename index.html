@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Playing XI Generator</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 10px;
+        }
+
+        .preview-container {
+            width: 1080px;
+            height: 1080px;
+            display: none;
+            position: relative;
+            background: url('image/background.png');
+            background-size: cover;
+            margin: 20px auto;
+        }
+
+        .player-entry {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        select,
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ff4500;
+            background: #333;
+            color: white;
+            border-radius: 4px;
+        }
+
+        select {
+            width: 150px;
+        }
+
+        input[type="text"] {
+            width: 200px;
+        }
+
+        .player-slot {
+            display: flex;
+            align-items: center;
+            position: absolute;
+            gap: 10px;
+        }
+
+        .player-icon {
+            width: 30px;
+            height: 30px;
+        }
+
+        .serial-number,
+        .player-name {
+            font-family: 'Inter', sans-serif;
+            font-weight: bold;
+            font-size: 22px;
+            color: white;
+        }
+
+        .impact-players {
+            position: absolute;
+            left: 540px;
+            top: 930px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 500px;
+        }
+
+        .impact-player {
+            font-family: 'Inter', sans-serif;
+            font-size: 22px;
+            color: white;
+            line-height: 1.5;
+        }
+
+        button {
+            background: #ff4500;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        button:hover {
+            background: #cc3700;
+        }
+
+        /* Left Column */
+        #slot-0 {
+            left: 123px;
+            top: 260px;
+        }
+
+        #slot-2 {
+            left: 123px;
+            top: 395px;
+        }
+
+        #slot-4 {
+            left: 123px;
+            top: 530px;
+        }
+
+        #slot-6 {
+            left: 123px;
+            top: 660px;
+        }
+
+        #slot-8 {
+            left: 123px;
+            top: 795px;
+        }
+
+        #slot-10 {
+            left: 123px;
+            top: 930px;
+        }
+
+        /* Right Column */
+        #slot-1 {
+            left: 560px;
+            top: 260px;
+        }
+
+        #slot-3 {
+            left: 560px;
+            top: 395px;
+        }
+
+        #slot-5 {
+            left: 560px;
+            top: 530px;
+        }
+
+        #slot-7 {
+            left: 560px;
+            top: 660px;
+        }
+
+        #slot-9 {
+            left: 560px;
+            top: 795px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+        <h2>Enter Playing XI Details</h2>
+        <div id="playerInputs"></div>
+        <h3>Impact Players</h3>
+        <div id="impactInputs"></div>
+        <div class="buttons">
+            <button onclick="generatePreview()">Generate Preview</button>
+        </div>
+    </div>
+
+    <div class="preview-container" id="preview">
+        <div class="impact-players" id="impactDisplay"></div>
+    </div>
+
+    <script>
+        const playerTypes = [
+            { name: 'Batsman', icon: 'bat-icon.png' },
+            { name: 'Allrounder', icon: 'all-icon.png' },
+            { name: 'Wicket Keeper', icon: 'wk-icon.png' },
+            { name: 'Pacer', icon: 'pace-icon.png' },
+            { name: 'Spinner', icon: 'spin-icon.png' }
+        ];
+
+        const playerDatabase = {
+            'Batsman': ['Abhinav Manohar', 'Atharva Taide', 'Sachin Baby', 'Aniket Verma'],
+            'Allrounder': ['Pat Cummins', 'Abhishek Sharma', 'Travis Head', 'Harshal Patel', 'Nitish Kumar Reddy', 'Kamindu Mendis', 'Brydon Carse'],
+            'Wicket Keeper': ['Heinrich Klassen', 'Ishan Kishan'],
+            'Pacer': ['Mohammed Shami', 'Simarjeet Singh', 'Jaydev Unadkat', 'Eshan Malinga'],
+            'Spinner': ['Zeeshan Ansari', 'Rahul Chahar', 'Adam Zampa']
+        };
+
+        const allPlayers = Object.values(playerDatabase).flat(); // Combine all players into one list
+
+        function createInputs() {
+            const playerContainer = document.getElementById('playerInputs');
+            for (let i = 0; i < 11; i++) {
+                playerContainer.innerHTML += `
+            <div class="player-entry">
+                <select id="type-${i}" onchange="updatePlayerOptions(${i})">
+                    <option value="">Select Type</option>
+                    ${Object.keys(playerDatabase).map(type =>
+                    `<option value="${type}">${type}</option>`
+                ).join('')}
+                </select>
+                <select id="name-${i}" onchange="validateOverseasLimit(${i})">
+                    <option value="">Select Player</option>
+                </select>
+            </div>
+        `;
+            }
+
+            const impactContainer = document.getElementById('impactInputs');
+            for (let i = 0; i < 5; i++) {
+                impactContainer.innerHTML += `
+            <select id="impact-${i}" onchange="updateAllDropdowns()">
+                <option value="">Select Impact Player</option>
+            </select>
+        `;
+            }
+        }
+
+        let overseasPlayers = ['Pat Cummins', 'Heinrich Klassen', 'Adam Zampa', 'Travis Head', 'Eshan Malinga', 'Kamindu Mendis', 'Brydon Carse'];
+
+        function validateOverseasLimit(index) {
+            const selectedPlayer = document.getElementById(`name-${index}`).value;
+            const selectedPlayers = Array.from({ length: 11 }, (_, i) =>
+                document.getElementById(`name-${i}`).value
+            );
+
+            const overseasCount = selectedPlayers.filter(player => overseasPlayers.includes(player)).length;
+
+            if (overseasCount > 4) {
+                alert('You can select only 4 overseas players.');
+                document.getElementById(`name-${index}`).value = ''; // Revert the selection
+            }
+
+            updateAllDropdowns();
+        }
+
+        function updatePlayerOptions(index) {
+            const typeSelect = document.getElementById(`type-${index}`);
+            const nameSelect = document.getElementById(`name-${index}`);
+            const selectedType = typeSelect.value;
+
+            // Clear previous options
+            nameSelect.innerHTML = '<option value="">Select Player</option>';
+
+            // Populate new options based on selected type
+            if (playerDatabase[selectedType]) {
+                playerDatabase[selectedType].forEach(player => {
+                    nameSelect.innerHTML += `<option value="${player}">${player}</option>`;
+                });
+            }
+
+            updateAllDropdowns();
+        }
+
+        function updateAllDropdowns() {
+            const selectedPlayers = new Set();
+
+            // Collect all selected players from playing XI and impact players
+            for (let i = 0; i < 11; i++) {
+                const selectedPlayer = document.getElementById(`name-${i}`).value;
+                if (selectedPlayer) selectedPlayers.add(selectedPlayer);
+            }
+            for (let i = 0; i < 5; i++) {
+                const selectedImpactPlayer = document.getElementById(`impact-${i}`).value;
+                if (selectedImpactPlayer) selectedPlayers.add(selectedImpactPlayer);
+            }
+
+            for (let i = 0; i < 11; i++) {
+                const nameSelect = document.getElementById(`name-${i}`);
+                const currentValue = nameSelect.value;
+
+                const typeSelect = document.getElementById(`type-${i}`);
+                const selectedType = typeSelect.value;
+                const validPlayers = playerDatabase[selectedType] || [];
+
+                nameSelect.innerHTML = '<option value="">Select Player</option>';
+                validPlayers.forEach(player => {
+                    if (!selectedPlayers.has(player) || player === currentValue) {
+                        nameSelect.innerHTML += `<option value="${player}" ${player === currentValue ? 'selected' : ''}>${player}</option>`;
+                    }
+                });
+            }
+
+            for (let i = 0; i < 5; i++) {
+                const impactSelect = document.getElementById(`impact-${i}`);
+                const currentValue = impactSelect.value;
+
+                // Rebuild dropdown options
+                impactSelect.innerHTML = '<option value="">Select Impact Player</option>';
+                allPlayers.forEach(player => {
+                    if (!selectedPlayers.has(player) || player === currentValue) {
+                        impactSelect.innerHTML += `<option value="${player}" ${player === currentValue ? 'selected' : ''}>${player}</option>`;
+                    }
+                });
+            }
+        }
+
+        function getPlayerData() {
+            const players = [];
+            for (let i = 0; i < 11; i++) {
+                players.push({
+                    type: document.getElementById(`type-${i}`).value,
+                    name: document.getElementById(`name-${i}`).value
+                });
+            }
+
+            const impactPlayers = Array.from({ length: 5 }, (_, i) =>
+                document.getElementById(`impact-${i}`).value
+            );
+
+            return { players, impactPlayers };
+        }
+
+
+        function saveToLocal() {
+            localStorage.setItem('playingXI', JSON.stringify(getPlayerData()));
+            alert('Team saved successfully!');
+        }
+
+        function loadFromLocal() {
+            const data = JSON.parse(localStorage.getItem('playingXI'));
+            if (!data) {
+                alert('No saved team found!');
+                return;
+            }
+
+            data.players.forEach((player, i) => {
+                document.getElementById(`type-${i}`).value = player.type;
+                document.getElementById(`name-${i}`).value = player.name;
+                document.getElementById(`intl-${i}`).checked = player.isInternational;
+            });
+
+            data.impactPlayers.forEach((name, i) => {
+                document.getElementById(`impact-${i}`).value = name;
+            });
+        }
+
+        function generatePreview() {
+            const preview = document.getElementById('preview');
+            preview.style.display = 'block';
+
+            preview.querySelectorAll('.player-slot').forEach(el => el.remove());
+
+            const data = getPlayerData();
+
+            data.players.forEach((player, i) => {
+                if (player.name) {  // Ensure player name is available
+                    const display = document.createElement('div');
+                    display.className = 'player-slot';
+                    display.id = `slot-${i}`;
+
+                    // Find the icon associated with the player type
+                    const iconFile = playerTypes.find(t => t.name === player.type)?.icon || 'default-icon.png'; // Provide a fallback if icon is not found
+
+                    display.innerHTML = `
+                <img src="image/${iconFile}" class="player-icon" alt="${player.type}">
+                <span class="serial-number">${i + 1}.</span>
+                <span class="player-name">${player.name}</span>
+            `;
+                    preview.appendChild(display);
+                }
+            });
+
+            const impactDisplay = document.getElementById('impactDisplay');
+            const validImpacts = data.impactPlayers.filter(name => name);
+            impactDisplay.innerHTML = `
+        <div class="impact-player">
+            ${validImpacts.slice(0, 3).join(', ')}
+            ${validImpacts.length > 3 ? '<br>' : ''}
+            ${validImpacts.slice(3).join(', ')}
+        </div>
+    `;
+        }
+
+
+        createInputs();
+    </script>
+</body>
+
+</html>
